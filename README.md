@@ -9,6 +9,28 @@ This repo contains:
 * Scripts using causal interventions to analyze how verbatim memorized sequences are encoded in the model representations.
 * Stress testing evaluation for unlearning methods that aim to remove the verbatim memorized information.
 
+## Setup
+
+### Install virtual environment
+
+`python3 -m venv .demystifying-verbatim-mem`
+
+Activate via: `source .demystifying-verbatim-mem/bin/activate`
+
+### Install dependencies
+
+- For the McGill cluster we have to install a pytorch version that is compatible with cuda 11.8: `pip install torch --index-url https://download.pytorch.org/whl/cu118`
+
+- Install all other dependencies: `pip install -r requirements.txt`
+
+- Install the package itself in editable mode: `pip install -e .`
+- Install Flash Attention `pip install flash-attn --no-build-isolation`
+
+#### Accessing restricted models on huggingface
+
+- To access restricted models such as Llama3 login to the huggingface-cli via `huggingface-cli login`
+- You need to provide an access token to authenticate yourself. You can find your tokens in your huggingface profile settings
+
 ## Data
 
 The [data](https://github.com/explanare/verbatim-memorization/main/data) directory contains the following datasets:
