@@ -1,1 +1,4 @@
 .demystifying-verbatim-mem/
+__pycache__/
+notebooks/media/table/
+*.npy
