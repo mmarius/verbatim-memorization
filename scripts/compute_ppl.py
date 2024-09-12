@@ -9,9 +9,35 @@ from datasets import load_dataset
 import pandas as pd
 
 
-def _load_model_and_tokenizer(model_name):
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+def _load_model_and_tokenizer(model_name, cache_dir):
+    step = None
+    if "step" in model_name:
+        step = model_name.split("-")[-1]
+        model_name = model_name.rsplit("-", 1)[0]
+    if "pythia" in model_name:
+        model_name = "EleutherAI/" + model_name
+
+    # loading tokenizer
+    print("Loading tokenizer:", model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
+
+    # loading pre-trained model
+    if step:
+        print("Loading model:", model_name, step)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name, cache_dir=cache_dir, revision=step
+        )
+    else:
+        print("Loading model:", model_name)
+        model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=cache_dir)
+
+    # some models require post-processing
+    if "pythia" in model_name:
+        # add padding token to the tokenizer
+        tokenizer.pad_token = tokenizer.eos_token
+        # add padding token to the model config
+        model.config.pad_token_id = tokenizer.eos_token_id
+
     return model, tokenizer
 
 
@@ -66,13 +92,10 @@ def _compute_batch_perplexity(
 
 def main(args):
     # load model and tokenizer
-    model, tokenizer = _load_model_and_tokenizer(args.model_name_or_path)
+    model, tokenizer = _load_model_and_tokenizer(
+        args.model_name_or_path, args.hf_cache_dir
+    )
     model.to(args.device)  # put model on device
-    if "EleutherAI/pythia" in args.model_name_or_path:
-        tokenizer.pad_token = tokenizer.eos_token  # add padding token to the tokenizer
-        model.config.pad_token_id = (
-            tokenizer.eos_token_id
-        )  # add padding token to the model config
 
     # load injection data
     dataset = _load_injection_data()
@@ -123,8 +146,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name_or_path", type=str, default="EleutherAI/pythia-70m"
     )
+    parser.add_argument(
+        "--hf_cache_dir", type=str, default="/mnt/research/scratch/mmosba/hf-cache-dir"
+    )
     parser.add_argument("--batch_size", type=int, default=1)
-    parser.add_argument("--max_seq_length", type=int, default=256) # Huang et al. (2024) truncate injection sequences after 256 tokens
+    parser.add_argument(
+        "--max_seq_length", type=int, default=256
+    )  # Huang et al. (2024) truncate injection sequences after 256 tokens
     parser.add_argument("--stride", type=int, default=256)
     parser.add_argument("--output_dir", type=str, default="./data")
     parser.add_argument("--device", type=str, default="cuda:0")
